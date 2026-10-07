@@ -47,7 +47,11 @@ def test_request_id_header():
 
 def test_rate_limit_trips_and_resets():
     import app.main as M
-    M._BUCKET["testclient"] = [999999.0] * 1000  # saturate this client's bucket
+    M._BUCKET.clear()
+    c.post("/api/v1/verify", json={"query": "ping", "jurisdiction": "india"})
+    assert len(M._BUCKET) == 1  # discover this TestClient's bucket key
+    key = next(iter(M._BUCKET))
+    M._BUCKET[key] = [999999.0] * 1000  # saturate it
     r = c.post("/api/v1/verify", json={"query": "patent churna?", "jurisdiction": "india"})
     assert r.json()["answer"].startswith("Rate limited")
     M._BUCKET.clear()
