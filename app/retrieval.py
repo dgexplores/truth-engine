@@ -86,6 +86,12 @@ def _parse_file(path: Path) -> list[Chunk]:
             locator=title, deep_link=f"corpus/sources/{path.name}", version_hash=vh))
     return chunks
 
+def warm() -> tuple[int, int, str]:
+    """Build index + IDF eagerly. Call once at startup so first answer is fast."""
+    idx = _index()
+    _idf()
+    return len(idx), len(list(CORPUS_DIR.glob("*.md"))), corpus_version()
+
 def _index() -> list[Chunk]:
     global _INDEX
     if _INDEX is None:

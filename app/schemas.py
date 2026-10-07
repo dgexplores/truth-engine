@@ -41,3 +41,7 @@ class VerifyResponse(BaseModel):
     security: SecurityReport
     corpus_version: str
     abstained: bool = False
+
+class FeedbackRequest(BaseModel):
+    helpful: bool
+    corpus_version: str = ""

@@ -55,3 +55,13 @@ def test_rate_limit_trips_and_resets():
     r = c.post("/api/v1/verify", json={"query": "patent churna?", "jurisdiction": "india"})
     assert r.json()["answer"].startswith("Rate limited")
     M._BUCKET.clear()
+
+def test_feedback_ok():
+    r = c.post("/api/v1/feedback", json={"helpful": True, "corpus_version": "test"})
+    assert r.json() == {"ok": True}
+
+def test_plain_words_summary():
+    r = c.post("/api/v1/verify", json={"query": "Do I need FSSAI license for selling food product?", "jurisdiction": "india"})
+    d = r.json()
+    assert not d["abstained"]
+    assert "food" in d["answer_simple"].lower() and "Verdict" in d["answer"]

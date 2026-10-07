@@ -9,14 +9,22 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
+import re
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    n_chunks, n_docs, ver = R.warm()
+    print(f"truth-engine warm: {n_chunks} chunks, {n_docs} docs, {ver}", flush=True)
+    yield
 from .schemas import (
-    Citation, Confidence, FirewallReport, SecurityReport, VerifyRequest, VerifyResponse,
+    Citation, Confidence, FeedbackRequest, FirewallReport, SecurityReport, VerifyRequest, VerifyResponse,
 )
 from . import retrieval as R
 from . import guard as G
 from . import security as S
 
-app = FastAPI(title="Truth Engine", version="1.0.0")
+app = FastAPI(title="Truth Engine", version="1.1.0", lifespan=lifespan)
 
 origins = [o.strip() for o in os.getenv("CORS_EXTRA_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000", *origins] or ["*"],
@@ -50,6 +58,11 @@ def health():
 @app.get("/corpus/version")
 def version():
     return {"corpus_version": R.corpus_version(), "docs": len(R._index())}
+
+@app.post("/api/v1/feedback")
+def feedback(fb: FeedbackRequest):
+    _audit(f"feedback helpful={fb.helpful} corpus={fb.corpus_version}")
+    return {"ok": True}
 
 @app.post("/api/v1/verify", response_model=VerifyResponse)
 def verify(req: VerifyRequest, request: Request):
@@ -100,10 +113,10 @@ def verify(req: VerifyRequest, request: Request):
 
     lines = [f"> {c.text.strip()}\n— {c.title}, {c.locator}" for c in top[:3]]
     verdict = top[0].title
-    answer = f"Answer from {req.jurisdiction} law (top: {verdict}):\n\n" + "\n\n".join(lines)
+    answer = f"Verdict: {top[0].locator} — {verdict} ({req.jurisdiction} law).\n\n" + "\n\n".join(lines)
     if fw["status"] in ("filtered", "leak_warning", "mixed_query") and fw["message"]:
         answer = f"**{fw['message']}**\n\n" + answer
-    simple = f"In plain words: top match is {verdict}. Check quotes + links before acting."
+    simple = _plain_words(top)
     cites = [Citation(title=c.title, locator=c.locator, span_text=c.text,
         deep_link=c.deep_link, version_hash=c.version_hash) for c in top[:3]]
     return VerifyResponse(
@@ -114,6 +127,14 @@ def verify(req: VerifyRequest, request: Request):
             injection_labels=inj_labels, pii_types=pii_types, pii_redacted_query=redacted_q),
         corpus_version=R.corpus_version(), abstained=False,
     )
+
+def _plain_words(top: list) -> str:
+    """Simple-language answer, still corpus text only. Uses embedded 'In plain words' gloss."""
+    for c in top:
+        m = re.search(r"In plain words:\s*(.+?)(?:\.|$)", c.text)
+        if m:
+            return m.group(1).strip().rstrip(".") + f" ({c.title}, {c.locator})."
+    return f"Top match is {top[0].title} — read the quoted sections below before acting."
 
 FRONT = Path(__file__).resolve().parents[1] / "frontend"
 if FRONT.exists():

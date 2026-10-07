@@ -1,74 +1,95 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="The Truth Engine — verifiable answers with quoted proof.">
 <title>The Truth Engine — verifiable answers</title>
 <style>
-:root{--bg:#0b0f14;--card:#131a23;--line:#243040;--txt:#e8eef5;--mut:#93a3b5;--ok:#2fbf71;--warn:#f0a22e;--bad:#e5484d}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui}
-.wrap{max-width:860px;margin:0 auto;padding:24px}
+:root{--bg:#0b0f14;--card:#131a23;--line:#243040;--txt:#e8eef5;--mut:#93a3b5;--ok:#2fbf71;--warn:#f0a22e;--bad:#e5484d;--acc:#1f6feb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding:24px 16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
 .row{display:flex;gap:8px;flex-wrap:wrap}input,select,button{font-size:15px;padding:10px 12px;border-radius:8px;border:1px solid var(--line)}
-input{flex:1;min-width:220px;background:#0e141c;color:var(--txt)}button{background:#1f6feb;color:#fff;border:0;cursor:pointer}
+input{flex:1;min-width:200px;background:#0e141c;color:var(--txt)}select{background:#0e141c;color:var(--txt)}
+button{background:var(--acc);color:#fff;border:0;cursor:pointer}button:disabled{opacity:.6}
 button.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12px;border:1px solid var(--line);color:var(--mut)}
 .bar{height:8px;background:#0e141c;border-radius:6px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--ok)}
-blockquote{border-left:3px solid #1f6feb;margin:8px 0;padding:8px 12px;background:#0e141c;border-radius:0 8px 8px 0;white-space:pre-wrap}
+blockquote{border-left:3px solid var(--acc);margin:8px 0;padding:8px 12px;background:#0e141c;border-radius:0 8px 8px 0;white-space:pre-wrap}
 .fire{padding:8px 12px;border-radius:8px;font-size:14px}.fire.clean{background:#0e2a1c}.fire.filtered{background:#0e2233}.fire.leak_warning,.fire.mixed_query{background:#33230e}
 .mut{color:var(--mut);font-size:13px}.mono{font-family:ui-monospace,monospace;font-size:12px}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chips button{font-size:13px;padding:6px 10px}
-@media print{.noprint{display:none}}
+.simple{background:#0e2a1c;border:1px solid #1d4a32;border-radius:8px;padding:10px 12px;margin:8px 0}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-3px}@keyframes sp{to{transform:rotate(360deg)}}
+.err{background:#331314;border:1px solid var(--bad);border-radius:8px;padding:10px 12px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+@media print{.noprint{display:none}body{background:#fff;color:#000}.card{background:#fff;border-color:#ccc}blockquote{background:#f5f5f5}}
 </style></head><body><div class="wrap">
-<h1>The Truth Engine</h1>
-<p class="mut">Verifiable answers. Every claim quoted. Injection blocked. PII redacted. Abstains when unsure. Offline CPU. <span id="ver" class="badge">…</span></p>
+<div class="topbar">
+<div><h1 style="margin:0" id="title">The Truth Engine</h1>
+<p class="mut" style="margin:4px 0" id="tag">Verifiable answers. Every claim quoted. <span id="ver" class="badge">…</span></p></div>
+<button class="ghost noprint" onclick="toggleLang()" id="langBtn">हिन्दी</button>
+</div>
 <div class="card"><div class="row noprint">
-<input id="q" placeholder="Ask — e.g. Can I patent my grandmother's churna recipe?">
+<input id="q" placeholder="Ask — e.g. Can I patent my grandmother's churna recipe?" onkeydown="if(event.key==='Enter')ask()">
 <select id="j"><option value="india">India</option><option value="international">International</option></select>
-<button onclick="ask()">Verify</button>
-<button class="ghost" onclick="voice()">🎙 Voice</button>
-</div><div class="chips noprint">
-<button class="ghost" onclick="setQ('Can I patent my grandmother churna recipe?')">churna patent?</button>
-<button class="ghost" onclick="setQ('Do I need permission to use a plant for a product?')">plant permission?</button>
-<button class="ghost" onclick="setQ('Selling abroad, what WIPO rule applies?')">sell abroad?</button>
-<button class="ghost" onclick="setQ('Can I copyright my Ayurveda textbook?')">textbook copyright?</button>
-</div></div>
-<div id="out"></div>
+<button onclick="ask()" id="go">Verify</button>
+<button class="ghost" onclick="voice()">🎙</button>
+</div><div class="chips noprint" id="chips"></div></div>
+<div id="out"><div class="card"><p class="mut" id="empty">Ask a question above — or tap an example. Answers arrive with quoted law, firewall verdict, and confidence. Unsure? It says so.</p></div></div>
 <div class="card noprint"><div class="row">
 <button class="ghost" onclick="exportMD()">Export Markdown</button>
+<button class="ghost" onclick="share()">Copy share link</button>
 <button class="ghost" onclick="window.print()">Print</button>
-<span class="mut">Voice uses browser speech recognition only — audio never leaves device.</span>
-</div></div>
+</div><p class="mut">Voice uses your browser only — audio never leaves this device. Information only, not legal advice. Verify citations at source before acting.</p></div>
 <script>
-let last=null;
+const S={
+en:{ph:"Ask — e.g. Can I patent my grandmother's churna recipe?",go:"Verify",empty:"Ask a question above — or tap an example. Answers arrive with quoted law, firewall verdict, and confidence. Unsure? It says so.",examples:["Can I patent my grandmother churna recipe?","Do I need permission to use a plant for a product?","Selling abroad, what WIPO rule applies?","Can I copyright my Ayurveda textbook?"]},
+hi:{ph:"पूछें — जैसे, क्या मैं दादी के चूर्ण का पेटेंट करा सकता हूँ?",go:"जाँचें",empty:"ऊपर सवाल पूछें — या उदाहरण दबाएँ। हर जवाब उद्धृत कानून, फ़ायरवॉल और विश्वास स्कोर के साथ। unsure? तो साफ मना।",examples:["पेटेंट चूर्ण कानून क्या है?","Can I patent my grandmother churna recipe?","Do I need FSSAI license for selling food product?","Why was the turmeric patent revoked?"]}};
+let lang='en',last=null;
+function toggleLang(){lang=lang==='en'?'hi':'en';const t=S[lang];
+ document.getElementById('q').placeholder=t.ph;document.getElementById('go').textContent=t.go;
+ document.getElementById('empty').textContent=t.empty;document.getElementById('langBtn').textContent=lang==='en'?'हिन्दी':'English';
+ document.getElementById('chips').innerHTML=t.examples.map(e=>`<button class="ghost" onclick="setQ(${JSON.stringify(e).replace(/"/g,'&quot;')})">${esc(e.slice(0,34))}</button>`).join('');}
 function setQ(s){document.getElementById('q').value=s;ask();}
 async function ask(){
- const query=document.getElementById('q').value.trim(); if(!query) return;
+ const query=document.getElementById('q').value.trim();if(!query)return;
  const jurisdiction=document.getElementById('j').value;
- const r=await fetch('/api/v1/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query,jurisdiction})});
- last=await r.json(); render(last);
+ history.replaceState(null,'','?q='+encodeURIComponent(query)+'&j='+jurisdiction);
+ const out=document.getElementById('out');document.getElementById('go').disabled=true;
+ out.innerHTML=`<div class="card"><span class="spin"></span> <span class="mut">Checking injection patterns, searching 20 documents, running firewall…</span></div>`;
+ try{
+  const r=await fetch('/api/v1/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query,jurisdiction})});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  last=await r.json();last.query=query;last.jurisdiction=jurisdiction;render(last);
+ }catch(e){out.innerHTML=`<div class="card"><div class="err">Backend unreachable (${esc(e.message)}). API sleeping? First request wakes Render in ~30s — retry.</div></div>`;}
+ document.getElementById('go').disabled=false;
 }
-function voice(){
- const SR=window.webkitSpeechRecognition||window.SpeechRecognition;
+function voice(){const SR=window.webkitSpeechRecognition||window.SpeechRecognition;
  if(!SR){alert('No browser speech recognition');return;}
- const rec=new SR(); rec.lang='hi-IN'; rec.onresult=e=>{document.getElementById('q').value=e.results[0][0].transcript;ask();}; rec.start();
-}
+ const rec=new SR();rec.lang=lang==='hi'?'hi-IN':'en-IN';rec.onresult=e=>{document.getElementById('q').value=e.results[0][0].transcript;ask();};rec.start();}
+async function fb(h){if(!last)return;await fetch('/api/v1/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({helpful:h,corpus_version:last.corpus_version})});document.getElementById('fb').innerHTML='<span class="mut">Thanks — logged.</span>';}
 function render(d){
- const fwCls='fire '+d.firewall.status;
+ const fw='fire '+d.firewall.status;
  document.getElementById('out').innerHTML=`
- <div class="card"><span class="badge">confidence ${d.confidence.score} ${d.abstained?'· abstained':''}</span>
+ <div class="card"><span class="badge">confidence ${d.confidence.score}${d.abstained?' · abstained':''}</span>
  <span class="badge">${d.corpus_version}</span>
  <div class="bar" style="margin:8px 0"><i style="width:${d.confidence.score}%"></i></div>
- <div class="mut">${d.confidence.rationale}</div>
- <div class="${fwCls}">Firewall: ${d.firewall.status}${d.firewall.message?' — '+d.firewall.message:''}</div>
- <div class="mut">Injection ${d.security.injection_score} ${d.security.injection_blocked?'BLOCKED '+d.security.injection_labels.join(','):''} · PII: ${d.security.pii_types.join(', ')||'none'}</div>
+ <div class="mut">${esc(d.confidence.rationale)}</div>
+ <div class="${fw}">Firewall: ${d.firewall.status}${d.firewall.message?' — '+esc(d.firewall.message):''}</div>
+ <div class="mut">Injection ${d.security.injection_score}${d.security.injection_blocked?' BLOCKED '+d.security.injection_labels.join(','):''} · PII: ${d.security.pii_types.join(', ')||'none'}</div>
+ ${d.answer_simple?`<div class="simple"><b>Simply:</b> ${esc(d.answer_simple)}</div>`:''}
  <h3>Answer</h3><div style="white-space:pre-wrap">${esc(d.answer)}</div>
  <h3>Proof</h3>${d.citations.map(c=>`<blockquote>${esc(c.span_text)}\n— ${esc(c.title)}, ${esc(c.locator)} <span class="mono">[${c.version_hash}]</span></blockquote>`).join('')||'<p class="mut">No citations — abstained.</p>'}
+ <div class="row noprint" id="fb"><span class="mut">Helpful?</span><button class="ghost" onclick="fb(true)">Yes</button><button class="ghost" onclick="fb(false)">No</button></div>
  </div>`;
 }
 function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}
-function exportMD(){
- if(!last){alert('Verify first');return;}
- const md=`# Truth Engine report\n\n${last.answer}\n\n## Proof\n${last.citations.map(c=>`> ${c.span_text}\n— ${c.title}, ${c.locator} [${c.version_hash}]`).join('\n\n')}\n\nConfidence ${last.confidence.score} · ${last.corpus_version}\n`;
- const b=new Blob([md],{type:'text/markdown'}); const a=document.createElement('a');
- a.href=URL.createObjectURL(b); a.download='truth-report.md'; a.click();
-}
-fetch('/corpus/version').then(r=>r.json()).then(d=>document.getElementById('ver').textContent=d.corpus_version);
+function exportMD(){if(!last){alert('Verify first');return;}
+ const md=`# Truth Engine report\n\nQuery: ${last.query}\n\n${last.answer}\n\n## Simply\n${last.answer_simple}\n\n## Proof\n${last.citations.map(c=>`> ${c.span_text}\n— ${c.title}, ${c.locator} [${c.version_hash}]`).join('\n\n')}\n\nConfidence ${last.confidence.score} · ${last.corpus_version}\n`;
+ const b=new Blob([md],{type:'text/markdown'});const a=document.createElement('a');
+ a.href=URL.createObjectURL(b);a.download='truth-report.md';a.click();}
+function share(){navigator.clipboard.writeText(location.href).then(()=>alert('Link copied'));}
+toggleLang();toggleLang();
+fetch('/corpus/version').then(r=>r.json()).then(d=>document.getElementById('ver').textContent=d.corpus_version+' · '+d.docs+' docs');
+const p=new URLSearchParams(location.search);
+if(p.get('q')){document.getElementById('q').value=p.get('q');if(p.get('j'))document.getElementById('j').value=p.get('j');ask();}
 </script></div></body></html>
