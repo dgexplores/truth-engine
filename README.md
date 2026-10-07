@@ -1,5 +1,8 @@
 # The Truth Engine v1.1 — complete product
 
+[![CI](https://github.com/dgexplores/truth-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/dgexplores/truth-engine/actions)
+https://github.com/dgexplores/truth-engine
+
 Verifiable AI. Quote-only. Firewall + security + confidence on every answer. Offline CPU. No keys.
 
 **Live paths:** `GET /` UI · `POST /api/v1/verify` · `GET /health` · `GET /corpus/version`
