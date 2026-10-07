@@ -3,6 +3,9 @@
 [![CI](https://github.com/dgexplores/truth-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/dgexplores/truth-engine/actions)
 https://github.com/dgexplores/truth-engine
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/dgexplores/truth-engine)
+One click → free web service. Build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. No keys needed.
+
 Verifiable AI. Quote-only. Firewall + security + confidence on every answer. Offline CPU. No keys.
 
 **Live paths:** `GET /` UI · `POST /api/v1/verify` · `GET /health` · `GET /corpus/version`
