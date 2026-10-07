@@ -10,6 +10,8 @@ Verifiable AI. Quote-only. Firewall + security + confidence on every answer. Off
 
 **Live paths:** `GET /` UI · `POST /api/v1/verify` · `GET /health` · `GET /corpus/version`
 
+Live: https://truth-engine-169y.onrender.com (free tier — first request wakes it, ~30s)
+
 ## Run
 ```
 pip install -r requirements.txt
