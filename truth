@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+"""truth CLI: verify/health/version without server."""
+from __future__ import annotations
+import json, sys
+sys.path.insert(0, ".")
+from fastapi.testclient import TestClient
+from app.main import app
+
+def cmd_verify(q: str, juris: str = "india"):
+    c = TestClient(app)
+    d = c.post("/api/v1/verify", json={"query": q, "jurisdiction": juris}).json()
+    print(d["answer"])
+    print(f"\n-- confidence {d['confidence']['score']} abstained={d['abstained']} firewall={d['firewall']['status']} inj={d['security']['injection_score']} {d['corpus_version']}")
+    for x in d["citations"]:
+        print(f"\n[{x['title']} | {x['locator']}]\n{x['span_text']}")
+
+def cmd_ingest_dry():
+    from pathlib import Path
+    from app import retrieval as R
+    idx = R._index()
+    print(f"{len(idx)} chunks from {len(list(R.CORPUS_DIR.glob('*.md')))} docs, no changes made")
+    print(f"corpus_version={R.corpus_version()}")
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print("usage: truth verify 'question' [india|international] | truth health | truth version | truth ingest-dry | truth corpus-hash")
+    elif sys.argv[1] == "health":
+        print(json.dumps(TestClient(app).get("/health").json(), indent=1))
+    elif sys.argv[1] == "version":
+        print(json.dumps(TestClient(app).get("/corpus/version").json(), indent=1))
+    elif sys.argv[1] == "ingest-dry":
+        cmd_ingest_dry()
+    elif sys.argv[1] == "corpus-hash":
+        from app import retrieval as R
+        print(R.corpus_version())
+    elif sys.argv[1] == "verify":
+        cmd_verify(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "india")

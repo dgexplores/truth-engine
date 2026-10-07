@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Truth Engine — verifiable answers</title>
+<style>
+:root{--bg:#0b0f14;--card:#131a23;--line:#243040;--txt:#e8eef5;--mut:#93a3b5;--ok:#2fbf71;--warn:#f0a22e;--bad:#e5484d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui}
+.wrap{max-width:860px;margin:0 auto;padding:24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap}input,select,button{font-size:15px;padding:10px 12px;border-radius:8px;border:1px solid var(--line)}
+input{flex:1;min-width:220px;background:#0e141c;color:var(--txt)}button{background:#1f6feb;color:#fff;border:0;cursor:pointer}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12px;border:1px solid var(--line);color:var(--mut)}
+.bar{height:8px;background:#0e141c;border-radius:6px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--ok)}
+blockquote{border-left:3px solid #1f6feb;margin:8px 0;padding:8px 12px;background:#0e141c;border-radius:0 8px 8px 0;white-space:pre-wrap}
+.fire{padding:8px 12px;border-radius:8px;font-size:14px}.fire.clean{background:#0e2a1c}.fire.filtered{background:#0e2233}.fire.leak_warning,.fire.mixed_query{background:#33230e}
+.mut{color:var(--mut);font-size:13px}.mono{font-family:ui-monospace,monospace;font-size:12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chips button{font-size:13px;padding:6px 10px}
+@media print{.noprint{display:none}}
+</style></head><body><div class="wrap">
+<h1>The Truth Engine</h1>
+<p class="mut">Verifiable answers. Every claim quoted. Injection blocked. PII redacted. Abstains when unsure. Offline CPU. <span id="ver" class="badge">…</span></p>
+<div class="card"><div class="row noprint">
+<input id="q" placeholder="Ask — e.g. Can I patent my grandmother's churna recipe?">
+<select id="j"><option value="india">India</option><option value="international">International</option></select>
+<button onclick="ask()">Verify</button>
+<button class="ghost" onclick="voice()">🎙 Voice</button>
+</div><div class="chips noprint">
+<button class="ghost" onclick="setQ('Can I patent my grandmother churna recipe?')">churna patent?</button>
+<button class="ghost" onclick="setQ('Do I need permission to use a plant for a product?')">plant permission?</button>
+<button class="ghost" onclick="setQ('Selling abroad, what WIPO rule applies?')">sell abroad?</button>
+<button class="ghost" onclick="setQ('Can I copyright my Ayurveda textbook?')">textbook copyright?</button>
+</div></div>
+<div id="out"></div>
+<div class="card noprint"><div class="row">
+<button class="ghost" onclick="exportMD()">Export Markdown</button>
+<button class="ghost" onclick="window.print()">Print</button>
+<span class="mut">Voice uses browser speech recognition only — audio never leaves device.</span>
+</div></div>
+<script>
+let last=null;
+function setQ(s){document.getElementById('q').value=s;ask();}
+async function ask(){
+ const query=document.getElementById('q').value.trim(); if(!query) return;
+ const jurisdiction=document.getElementById('j').value;
+ const r=await fetch('/api/v1/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query,jurisdiction})});
+ last=await r.json(); render(last);
+}
+function voice(){
+ const SR=window.webkitSpeechRecognition||window.SpeechRecognition;
+ if(!SR){alert('No browser speech recognition');return;}
+ const rec=new SR(); rec.lang='hi-IN'; rec.onresult=e=>{document.getElementById('q').value=e.results[0][0].transcript;ask();}; rec.start();
+}
+function render(d){
+ const fwCls='fire '+d.firewall.status;
+ document.getElementById('out').innerHTML=`
+ <div class="card"><span class="badge">confidence ${d.confidence.score} ${d.abstained?'· abstained':''}</span>
+ <span class="badge">${d.corpus_version}</span>
+ <div class="bar" style="margin:8px 0"><i style="width:${d.confidence.score}%"></i></div>
+ <div class="mut">${d.confidence.rationale}</div>
+ <div class="${fwCls}">Firewall: ${d.firewall.status}${d.firewall.message?' — '+d.firewall.message:''}</div>
+ <div class="mut">Injection ${d.security.injection_score} ${d.security.injection_blocked?'BLOCKED '+d.security.injection_labels.join(','):''} · PII: ${d.security.pii_types.join(', ')||'none'}</div>
+ <h3>Answer</h3><div style="white-space:pre-wrap">${esc(d.answer)}</div>
+ <h3>Proof</h3>${d.citations.map(c=>`<blockquote>${esc(c.span_text)}\n— ${esc(c.title)}, ${esc(c.locator)} <span class="mono">[${c.version_hash}]</span></blockquote>`).join('')||'<p class="mut">No citations — abstained.</p>'}
+ </div>`;
+}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function exportMD(){
+ if(!last){alert('Verify first');return;}
+ const md=`# Truth Engine report\n\n${last.answer}\n\n## Proof\n${last.citations.map(c=>`> ${c.span_text}\n— ${c.title}, ${c.locator} [${c.version_hash}]`).join('\n\n')}\n\nConfidence ${last.confidence.score} · ${last.corpus_version}\n`;
+ const b=new Blob([md],{type:'text/markdown'}); const a=document.createElement('a');
+ a.href=URL.createObjectURL(b); a.download='truth-report.md'; a.click();
+}
+fetch('/corpus/version').then(r=>r.json()).then(d=>document.getElementById('ver').textContent=d.corpus_version);
+</script></div></body></html>
