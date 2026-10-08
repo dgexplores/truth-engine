@@ -15,7 +15,7 @@ Live: https://truth-engine-169y.onrender.com (free tier — first request wakes 
 ## Run
 ```
 pip install -r requirements.txt
-make check   # 10 pytest + 26-case eval gate
+make check   # 12 pytest + 26-case eval gate
 make run     # http://localhost:8001 (UI + docs at /docs)
 python3 truth verify "Can I patent churna?" india
 python3 truth ingest-dry   # corpus preview, no changes
@@ -34,5 +34,16 @@ citations[title/locator/span/version_hash] + firewall{status, foreign_ratio} + s
 
 ## Corpus (20 docs, versioned sha)
 Patents Act, Patents Rules 2024, BDA, GRATK, PCT, TRIPS, CBD/Nagoya, Trademarks, Copyright, Designs, GI, PPVFR, Trade Secrets, Drugs & Cosmetics, Magic Remedies, FSSAI, Export Access, MGNREGA sample, Divya Pharmacy case, Turmeric/Neem revocations. Edit md → hash changes → eval must re-pass.
+
+## Repo map
+```
+app/         FastAPI service — main.py routes, retrieval.py offline index,
+             guard.py firewall + confidence, security.py injection/PII gates
+frontend/    single-file UI (index.html)
+corpus/      20 versioned law documents, sha-stamped on every answer
+eval/        26-case golden set (golden_set.json) + run_eval.py gate
+tests/       12 pytest (test_truth.py)
+truth        offline CLI — verify / health / version without a server
+```
 
 Fused from aegis (security) + sakti (grounding/firewall/conf) + nirikshan (evidence-first) + bloompulse (calibration).
